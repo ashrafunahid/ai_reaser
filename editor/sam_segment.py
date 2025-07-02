@@ -49,7 +49,9 @@ def generate_mask_with_mask(image_path, mask_array):
         mask_array = mask_array[:, :, 0]  # Use first channel if RGB
 
     # Convert to binary float32 mask
-    mask_array = (mask_array > 128).astype(np.float32)
+    # The input mask_array from views.py is already 0s and 1s (uint8).
+    # We just need to convert it to float32.
+    mask_array = mask_array.astype(np.float32)
 
     with torch.no_grad():
         # Get image embeddings
@@ -60,7 +62,7 @@ def generate_mask_with_mask(image_path, mask_array):
         mask_resized = cv2.resize(mask_array, (w_feat, h_feat), interpolation=cv2.INTER_LINEAR)
 
         # Convert to tensor
-        dense_prompt = torch.tensor(mask_resized, dtype=torch.float32, device=device)
+        dense_prompt = torch.as_tensor(mask_resized, dtype=torch.float32, device=device)
         dense_prompt = dense_prompt.unsqueeze(0).unsqueeze(0)  # Shape: [1, 1, h, w]
 
         # Get dense positional encodings
