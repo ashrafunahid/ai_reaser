@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Segmentation Result</title>
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body class="container">
+    <table>
+        <tr>
+            <td><h2>Original Image</h2></td>
+            <td><h2>Generated Mask</h2></td>
+            <td><h2>Inpainted Image</h2></td>
+        </tr>
+        <tr>
+            <td><img src="{{ image.image.url }}" width="400"></td>
+            <td><img src="{{ mask_path }}" width="400"></td>
+            <td><img src="{{ inpainted_path }}" width="400"></td>
+        </tr>
+    </table>
+</body>
+</html>

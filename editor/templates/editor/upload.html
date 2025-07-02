@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Upload Image</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>
+        .error {
+            color: red;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            cursor: crosshair;
+            display: block;
+            margin-top: 10px;
+            max-width: 100%;
+            height: auto;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .button-group {
+            margin: 15px 0;
+        }
+        button {
+            padding: 8px 15px;
+            margin-right: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #brushSize {
+            width: 60px;
+            margin-left: 10px;
+        }
+        #canvasWrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        #canvasWrapper canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>Upload Image</h2>
+
+        {% if error %}
+            <p class="error">{{ error }}</p>
+        {% endif %}
+
+        <form id="uploadForm" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <!-- Upload image -->
+            <label for="id_image">Select Image:</label>
+            <input type="file" name="image" id="imageInput" accept="image/*" required><br><br>
+
+            <!-- X, Y Point hidden inputs -->
+            <input type="hidden" name="x_point" id="x_point">
+            <input type="hidden" name="y_point" id="y_point">
+
+            <!-- Drawn mask hidden input (base64) -->
+            <input type="hidden" name="mask_data" id="mask_data">
+
+            <p><strong>Option 1:</strong> Click on image to select a point<br>
+               <strong>Option 2:</strong> Draw over the object directly (brush tool)</p>
+
+            <div class="button-group">
+                <label for="brushSize">Brush Size:</label>
+                <input type="number" id="brushSize" value="20" min="1" max="100">
+                
+                <button type="button" id="clearButton">Clear Drawing</button>
+            </div>
+
+            <div class="button-group">
+                <button type="submit" name="action" value="point">Segment With Point</button>
+                <button type="submit" name="action" value="mask">Segment With Mask</button>
+            </div>
+        </form>
+
+        <br>
+        <h3>Image Preview (click or draw)</h3>
+
+        <!-- Canvas will show the image and allow drawing -->
+         <div id="canvasWrapper">
+             <canvas id="imageCanvas"></canvas>
+             <canvas id="drawCanvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+    const imageInput = document.getElementById("imageInput");
+    const imageCanvas = document.getElementById("imageCanvas");
+    const imageCtx = imageCanvas.getContext("2d");
+
+    const drawCanvas = document.getElementById("drawCanvas");
+    const drawCtx = drawCanvas.getContext("2d");
+
+    const clearButton = document.getElementById("clearButton");
+    const brushSizeInput = document.getElementById("brushSize");
+
+    let drawing = false;
+    let imageLoaded = false;
+    let uploadedImage = new Image();
+    let lastX = 0;
+    let lastY = 0;
+
+    // Load image and resize both canvases
+    imageInput.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            uploadedImage.onload = function() {
+                const maxWidth = 800;
+                const maxHeight = 600;
+                let width = uploadedImage.width;
+                let height = uploadedImage.height;
+
+                if (width > maxWidth) {
+                    const ratio = maxWidth / width;
+                    width = maxWidth;
+                    height = height * ratio;
+                }
+
+                if (height > maxHeight) {
+                    const ratio = maxHeight / height;
+                    height = maxHeight;
+                    width = width * ratio;
+                }
+
+                imageCanvas.width = drawCanvas.width = width;
+                imageCanvas.height = drawCanvas.height = height;
+
+                imageCtx.clearRect(0, 0, width, height);
+                drawCtx.clearRect(0, 0, width, height);
+
+                imageCtx.drawImage(uploadedImage, 0, 0, width, height);
+                imageLoaded = true;
+            };
+            uploadedImage.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // Drawing on drawCanvas only
+    drawCanvas.addEventListener("mousedown", (e) => {
+        if (!imageLoaded) return;
+        drawing = true;
+        [lastX, lastY] = [e.offsetX, e.offsetY];
+
+        drawCtx.beginPath();
+        drawCtx.arc(lastX, lastY, brushSizeInput.value / 2, 0, Math.PI * 2);
+        drawCtx.fillStyle = "white";
+        drawCtx.fill();
+    });
+
+    drawCanvas.addEventListener("mouseup", () => drawing = false);
+    drawCanvas.addEventListener("mouseout", () => drawing = false);
+
+    drawCanvas.addEventListener("mousemove", (e) => {
+        if (!drawing || !imageLoaded) return;
+        drawCtx.strokeStyle = "white";
+        drawCtx.lineWidth = brushSizeInput.value;
+        drawCtx.lineCap = "round";
+        drawCtx.beginPath();
+        drawCtx.moveTo(lastX, lastY);
+        drawCtx.lineTo(e.offsetX, e.offsetY);
+        drawCtx.stroke();
+        [lastX, lastY] = [e.offsetX, e.offsetY];
+    });
+
+    // Clear drawing only
+    clearButton.addEventListener("click", () => {
+        if (imageLoaded) {
+            drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+        }
+    });
+
+    // Get X,Y coordinate on click (from imageCanvas)
+    drawCanvas.addEventListener("click", (e) => {
+        if (!imageLoaded) return;
+
+        const rect = drawCanvas.getBoundingClientRect();
+        const scaleX = drawCanvas.width / rect.width;
+        const scaleY = drawCanvas.height / rect.height;
+
+        const x = Math.round((e.clientX - rect.left) * scaleX);
+        const y = Math.round((e.clientY - rect.top) * scaleY);
+
+        document.getElementById("x_point").value = x;
+        document.getElementById("y_point").value = y;
+
+        // Optional: Mark point visually
+        drawCtx.beginPath();
+        drawCtx.arc(x, y, 5, 0, Math.PI * 2);
+        drawCtx.fillStyle = "red";
+        drawCtx.fill();
+    });
+
+    // On form submit, extract only white drawings from drawCanvas
+    document.getElementById("uploadForm").addEventListener("submit", function (e) {
+        if (!imageLoaded) {
+            alert("Please upload an image first!");
+            e.preventDefault();
+            return;
+        }
+
+        const width = drawCanvas.width;
+        const height = drawCanvas.height;
+
+        const maskCanvas = document.createElement("canvas");
+        maskCanvas.width = width;
+        maskCanvas.height = height;
+        const maskCtx = maskCanvas.getContext("2d");
+
+        // Fill with black background
+        maskCtx.fillStyle = "black";
+        maskCtx.fillRect(0, 0, width, height);
+
+        // Get drawn white parts only
+        const drawData = drawCtx.getImageData(0, 0, width, height);
+        const maskData = maskCtx.createImageData(width, height);
+
+        for (let i = 0; i < drawData.data.length; i += 4) {
+            const r = drawData.data[i];
+            const g = drawData.data[i + 1];
+            const b = drawData.data[i + 2];
+
+            const isWhite = r > 200 && g > 200 && b > 200;
+
+            if (isWhite) {
+                maskData.data[i] = 255;
+                maskData.data[i + 1] = 255;
+                maskData.data[i + 2] = 255;
+                maskData.data[i + 3] = 255;
+            } else {
+                maskData.data[i] = 0;
+                maskData.data[i + 1] = 0;
+                maskData.data[i + 2] = 0;
+                maskData.data[i + 3] = 255;
+            }
+        }
+
+        maskCtx.putImageData(maskData, 0, 0);
+
+        const maskDataURL = maskCanvas.toDataURL("image/png");
+        document.getElementById("mask_data").value = maskDataURL;
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,23 @@
+Collecting scikit-image
+  Downloading scikit_image-0.25.2-cp311-cp311-win_amd64.whl.metadata (14 kB)
+Requirement already satisfied: numpy>=1.24 in c:\users\ashra\torch-env\lib\site-packages (from scikit-image) (2.3.1)
+Collecting scipy>=1.11.4 (from scikit-image)
+  Using cached scipy-1.16.0-cp311-cp311-win_amd64.whl.metadata (60 kB)
+Requirement already satisfied: networkx>=3.0 in c:\users\ashra\torch-env\lib\site-packages (from scikit-image) (3.5)
+Requirement already satisfied: pillow>=10.1 in c:\users\ashra\torch-env\lib\site-packages (from scikit-image) (11.2.1)
+Collecting imageio!=2.35.0,>=2.33 (from scikit-image)
+  Downloading imageio-2.37.0-py3-none-any.whl.metadata (5.2 kB)
+Collecting tifffile>=2022.8.12 (from scikit-image)
+  Downloading tifffile-2025.6.11-py3-none-any.whl.metadata (32 kB)
+Requirement already satisfied: packaging>=21 in c:\users\ashra\torch-env\lib\site-packages (from scikit-image) (25.0)
+Collecting lazy-loader>=0.4 (from scikit-image)
+  Using cached lazy_loader-0.4-py3-none-any.whl.metadata (7.6 kB)
+Downloading scikit_image-0.25.2-cp311-cp311-win_amd64.whl (12.8 MB)
+   ---------------------------------------- 12.8/12.8 MB 529.7 kB/s eta 0:00:00
+Downloading imageio-2.37.0-py3-none-any.whl (315 kB)
+Using cached lazy_loader-0.4-py3-none-any.whl (12 kB)
+Using cached scipy-1.16.0-cp311-cp311-win_amd64.whl (38.6 MB)
+Downloading tifffile-2025.6.11-py3-none-any.whl (230 kB)
+Installing collected packages: tifffile, scipy, lazy-loader, imageio, scikit-image
+
+Successfully installed imageio-2.37.0 lazy-loader-0.4 scikit-image-0.25.2 scipy-1.16.0 tifffile-2025.6.11
