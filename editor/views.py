@@ -30,6 +30,12 @@ def upload_image(request):
                 mask_array = cv2.imdecode(np.frombuffer(mask_bytes, np.uint8), cv2.IMREAD_GRAYSCALE) 
                 mask_array = (mask_array > 128).astype(np.uint8)  # Binary mask
 
+                # --- JULES: Debug: Save the mask as processed in views.py ---
+                debug_mask_dir = os.path.join('media', 'debug')
+                os.makedirs(debug_mask_dir, exist_ok=True)
+                cv2.imwrite(os.path.join(debug_mask_dir, f'view_mask_{uploaded.id}.png'), mask_array * 255)
+                # --- END JULES ---
+
                 segmented_mask = generate_mask_with_mask(image_path, mask_array)
 
             elif action == 'point' and x and y:
