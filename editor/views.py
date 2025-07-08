@@ -9,7 +9,9 @@ from .sam_segment import generate_mask_with_point, generate_mask_with_mask
 from .lama_infer import load_lama_model, run_lama_inpainting
 
 # Declaring Model Globally
-lama_model = load_lama_model()
+# lama_model = load_lama_model() # Old
+# lama_model, lama_refinement_kwargs = load_lama_model() # Previous version
+lama_model, lama_refiner_config = load_lama_model() # New variable name
 
 def upload_image(request):
     if request.method == 'POST':
@@ -54,11 +56,16 @@ def upload_image(request):
             cv2.imwrite(mask_save_path, segmented_mask * 255)
             
             # Inpaint with LaMa
-            inpainted = run_lama_inpainting(image_path, mask_save_path, lama_model)
+            # inpainted = run_lama_inpainting(image_path, mask_save_path, lama_model) # Old
+            # inpainted = run_lama_inpainting(image_path, mask_save_path, lama_model, lama_refinement_kwargs) # Previous
+            inpainted = run_lama_inpainting(image_path, mask_save_path, lama_model, lama_refiner_config) # New
 
             # Save inpainted result
             inpaint_path = os.path.join('media', 'outputs', f'inpaint_{uploaded.id}.png')
-            cv2.imwrite(inpaint_path, inpainted)
+            # --- JULES: Convert RGB to BGR for cv2.imwrite ---
+            inpainted_bgr = cv2.cvtColor(inpainted, cv2.COLOR_RGB2BGR)
+            cv2.imwrite(inpaint_path, inpainted_bgr)
+            # --- END JULES ---
 
             return render(request, 'editor/result.html', {
                 'image': uploaded,
