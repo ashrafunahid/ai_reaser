@@ -119,6 +119,8 @@
     let uploadedImage = new Image();
     let lastX = 0;
     let lastY = 0;
+    // let isDrawingStroke = false; // Flag to track if a drawing stroke is in progress - REMOVED
+    let hasMoved = false; // True if mouse has moved between mousedown and mouseup
 
     // Load image and resize both canvases
     imageInput.addEventListener("change", (e) => {
@@ -163,19 +165,29 @@
     drawCanvas.addEventListener("mousedown", (e) => {
         if (!imageLoaded) return;
         drawing = true;
+        hasMoved = false; // Reset hasMoved flag
         [lastX, lastY] = [e.offsetX, e.offsetY];
 
+        // Draw initial dot for the stroke (always white)
         drawCtx.beginPath();
         drawCtx.arc(lastX, lastY, brushSizeInput.value / 2, 0, Math.PI * 2);
         drawCtx.fillStyle = "white";
         drawCtx.fill();
     });
 
-    drawCanvas.addEventListener("mouseup", () => drawing = false);
-    drawCanvas.addEventListener("mouseout", () => drawing = false);
+    drawCanvas.addEventListener("mouseup", () => {
+        drawing = false;
+        // hasMoved will be checked by the click handler if it was a click
+        // or used to prevent click handler if it was a drag
+    });
+
+    drawCanvas.addEventListener("mouseout", () => {
+        drawing = false; // Stop drawing if mouse leaves canvas
+    });
 
     drawCanvas.addEventListener("mousemove", (e) => {
         if (!drawing || !imageLoaded) return;
+        hasMoved = true; // Mouse has moved, so it's a drawing stroke
         drawCtx.strokeStyle = "white";
         drawCtx.lineWidth = brushSizeInput.value;
         drawCtx.lineCap = "round";
@@ -195,7 +207,14 @@
 
     // Get X,Y coordinate on click (from imageCanvas)
     drawCanvas.addEventListener("click", (e) => {
-        if (!imageLoaded) return;
+        // If mouse moved between mousedown and mouseup, it was a drag (drawing stroke), not a click for point selection.
+        if (!imageLoaded || hasMoved) {
+            // If it was a drag, reset hasMoved for the next independent click.
+            // This might not be strictly necessary if mousedown always resets it,
+            // but it's safer to ensure clean state.
+            if (hasMoved) hasMoved = false;
+            return;
+        }
 
         const rect = drawCanvas.getBoundingClientRect();
         const scaleX = drawCanvas.width / rect.width;
@@ -207,9 +226,16 @@
         document.getElementById("x_point").value = x;
         document.getElementById("y_point").value = y;
 
-        // Optional: Mark point visually
+        // Clear previous red dots before drawing a new one
+        // This requires a more complex solution if we want to preserve drawing and only remove red dots.
+        // For now, let's assume clearing and redrawing is acceptable for point selection.
+        // A better way would be to have a separate layer for points or manage state more carefully.
+        // To avoid clearing user's drawing, we will only draw the red dot and rely on form submission
+        // to handle the point, or clear button to clear everything.
+
+        // Mark point visually
         drawCtx.beginPath();
-        drawCtx.arc(x, y, 5, 0, Math.PI * 2);
+        drawCtx.arc(x, y, 5, 0, Math.PI * 2); // Red dot for point selection
         drawCtx.fillStyle = "red";
         drawCtx.fill();
     });
