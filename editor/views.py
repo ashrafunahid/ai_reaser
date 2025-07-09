@@ -9,7 +9,9 @@ from .sam_segment import generate_mask_with_point, generate_mask_with_mask
 from .lama_infer import load_lama_model, run_lama_inpainting
 
 # Declaring Model Globally
-lama_model = load_lama_model()
+# lama_model = load_lama_model() # Old
+# lama_model, lama_refinement_kwargs = load_lama_model() # Previous version
+lama_model, lama_refiner_config = load_lama_model() # New variable name
 
 def upload_image(request):
     if request.method == 'POST':
@@ -30,6 +32,12 @@ def upload_image(request):
                 mask_array = cv2.imdecode(np.frombuffer(mask_bytes, np.uint8), cv2.IMREAD_GRAYSCALE) 
                 mask_array = (mask_array > 128).astype(np.uint8)  # Binary mask
 
+                # --- JULES: Debug: Save the mask as processed in views.py ---
+                debug_mask_dir = os.path.join('media', 'debug')
+                os.makedirs(debug_mask_dir, exist_ok=True)
+                cv2.imwrite(os.path.join(debug_mask_dir, f'view_mask_{uploaded.id}.png'), mask_array * 255)
+                # --- END JULES ---
+
                 segmented_mask = generate_mask_with_mask(image_path, mask_array)
 
             elif action == 'point' and x and y:
@@ -48,11 +56,16 @@ def upload_image(request):
             cv2.imwrite(mask_save_path, segmented_mask * 255)
             
             # Inpaint with LaMa
-            inpainted = run_lama_inpainting(image_path, mask_save_path, lama_model)
+            # inpainted = run_lama_inpainting(image_path, mask_save_path, lama_model) # Old
+            # inpainted = run_lama_inpainting(image_path, mask_save_path, lama_model, lama_refinement_kwargs) # Previous
+            inpainted = run_lama_inpainting(image_path, mask_save_path, lama_model, lama_refiner_config) # New
 
             # Save inpainted result
             inpaint_path = os.path.join('media', 'outputs', f'inpaint_{uploaded.id}.png')
-            cv2.imwrite(inpaint_path, inpainted)
+            # --- JULES: Convert RGB to BGR for cv2.imwrite ---
+            inpainted_bgr = cv2.cvtColor(inpainted, cv2.COLOR_RGB2BGR)
+            cv2.imwrite(inpaint_path, inpainted_bgr)
+            # --- END JULES ---
 
             return render(request, 'editor/result.html', {
                 'image': uploaded,

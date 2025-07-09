@@ -10,7 +10,8 @@
         }
     </style>
 </head>
-<body class="container">
+<body>
+    <center>
     <table>
         <tr>
             <td><h2>Original Image</h2></td>
@@ -18,10 +19,11 @@
             <td><h2>Inpainted Image</h2></td>
         </tr>
         <tr>
-            <td><img src="{{ image.image.url }}" width="400"></td>
-            <td><img src="{{ mask_path }}" width="400"></td>
-            <td><img src="{{ inpainted_path }}" width="400"></td>
+            <td><img src="{{ image.image.url }}" width="500"></td>
+            <td><img src="{{ mask_path }}" width="500"></td>
+            <td><img src="{{ inpainted_path }}" width="500"></td>
         </tr>
     </table>
+</center>
 </body>
 </html>

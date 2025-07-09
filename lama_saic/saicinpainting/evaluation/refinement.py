@@ -195,8 +195,12 @@ def _get_image_mask_pyramid(batch : dict, min_side : int, max_scales : int, px_b
 
     assert batch['image'].shape[0] == 1, "refiner works on only batches of size 1!"
 
+    print("DEBUG JULES: INSIDE _get_image_mask_pyramid. Checking batch['unpad_to_size'] type.") # NEW DEBUG LINE
+    print(f"DEBUG JULES: batch['unpad_to_size'] = {batch['unpad_to_size']}") # NEW DEBUG LINE
+    print(f"DEBUG JULES: type(batch['unpad_to_size']) = {type(batch['unpad_to_size'])}") # NEW DEBUG LINE
+    
     h, w = batch['unpad_to_size']
-    h, w = h[0].item(), w[0].item()
+    # h, w = h[0].item(), w[0].item() # This line is problematic if h,w are already ints from the line above.
 
     image = batch['image'][...,:h,:w]
     mask = batch['mask'][...,:h,:w]

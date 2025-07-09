@@ -82,7 +82,7 @@
 
             <div class="button-group">
                 <label for="brushSize">Brush Size:</label>
-                <input type="number" id="brushSize" value="20" min="1" max="100">
+                <input type="number" id="brushSize" value="50" min="1" max="100">
                 
                 <button type="button" id="clearButton">Clear Drawing</button>
             </div>
@@ -231,7 +231,7 @@
         const maskCtx = maskCanvas.getContext("2d");
 
         // Fill with black background
-        maskCtx.fillStyle = "black";
+        maskCtx.fillStyle = "rgba(255, 255, 255, 0.6)";
         maskCtx.fillRect(0, 0, width, height);
 
         // Get drawn white parts only
