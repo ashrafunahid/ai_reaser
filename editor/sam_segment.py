@@ -5,16 +5,36 @@ import torch
 import torch.nn.functional as F
 import os
 
-# Load model
-sam_checkpoint = "segment-anything/checkpoints/sam_vit_h_4b8939.pth"
-model_type = "vit_h"
-device = "cuda" if torch.cuda.is_available() else "cpu"
+import threading
 
-sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
-sam.to(device=device)
-predictor = SamPredictor(sam)
+# Load model with threading
+# Thread-local storage
+_thread_locals = threading.local()
+
+def get_predictor():
+    if not hasattr(_thread_locals, "predictor"):
+        # Lazy-load model per thread
+        sam_checkpoint = "segment-anything/checkpoints/sam_vit_h_4b8939.pth"
+        model_type = "vit_h"
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+
+        sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
+        sam.to(device=device)
+        _thread_locals.predictor = SamPredictor(sam)
+
+    return _thread_locals.predictor
+
+# # Load model Without threading
+# sam_checkpoint = "segment-anything/checkpoints/sam_vit_h_4b8939.pth"
+# model_type = "vit_h"
+# device = "cuda" if torch.cuda.is_available() else "cpu"
+
+# sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
+# sam.to(device=device)
+# predictor = SamPredictor(sam)
 
 def generate_mask_with_point(image_path, input_point):
+    predictor = get_predictor()
     image = cv2.imread(image_path)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
@@ -30,10 +50,8 @@ def generate_mask_with_point(image_path, input_point):
     return masks[0]
 
 
-
-
 def generate_mask_with_mask(image_path, mask_array):
-    # --- Debugging ---
+    predictor = get_predictor()
     image_id_str = os.path.splitext(os.path.basename(image_path))[0] # Extract image id assuming format like '1.png' or 'some_name.jpg'
     debug_mask_dir = os.path.join('media', 'debug')
     os.makedirs(debug_mask_dir, exist_ok=True)
@@ -41,7 +59,6 @@ def generate_mask_with_mask(image_path, mask_array):
     print(f"[SAM Debug {image_id_str}] generate_mask_with_mask called.")
     print(f"[SAM Debug {image_id_str}] Input mask_array - Shape: {mask_array.shape}, Dtype: {mask_array.dtype}, Unique values: {np.unique(mask_array)}")
     # cv2.imwrite(os.path.join(debug_mask_dir, f"sam_input_mask_{image_id_str}.png"), mask_array * 255) # Renamed temp_debug_mask
-    # --- END Debugging ---
 
     # Load and prepare the image
     image = cv2.imread(image_path)
@@ -82,7 +99,7 @@ def generate_mask_with_mask(image_path, mask_array):
         # cv2.imwrite(os.path.join(debug_mask_dir, f"sam_mask_resized_binarized_prompt_{image_id_str}.png"), (mask_resized * 255).astype(np.uint8)) # Save the binarized version for inspection
 
         # Convert to tensor
-        dense_prompt = torch.as_tensor(mask_resized, dtype=torch.float32, device=device)
+        dense_prompt = torch.as_tensor(mask_resized, dtype=torch.float32, device=predictor.device)
         dense_prompt = dense_prompt.unsqueeze(0).unsqueeze(0)  # Shape: [1, 1, h, w]
         print(f"[SAM Debug {image_id_str}] Dense_prompt tensor (from binarized mask_resized) - Shape: {dense_prompt.shape}, Dtype: {dense_prompt.dtype}, Min: {dense_prompt.min()}, Max: {dense_prompt.max()}")
 
@@ -92,7 +109,7 @@ def generate_mask_with_mask(image_path, mask_array):
         # Sparse prompt is empty
         sparse_embeddings = torch.zeros(
             (1, 0, predictor.model.prompt_encoder.embed_dim),
-            device=device
+            device=predictor.device
         )
 
         # Decode mask
@@ -156,7 +173,7 @@ def generate_mask_with_mask(image_path, mask_array):
                 best_mask_np = None # Will trigger fallback later
                 selected_mask_info_log = "No masks from SAM to evaluate."
             else:
-                # --- Modify SAM Mask Selection Logic for Object Expansion ---
+                # ---  Modify SAM Mask Selection Logic for Object Expansion ---
                 # Select SAM mask with the highest internal SAM IoU score.
                 best_sam_internal_iou = -1
                 selected_mask_index_by_sam_iou = -1
@@ -218,9 +235,7 @@ def generate_mask_with_mask(image_path, mask_array):
                         best_mask_np = np.zeros((sam_output_h, sam_output_w), dtype=np.uint8) # Default blank
                         selected_mask_info_log = "Critical: No masks in processed_masks_info for selection."
 
-            # --- END Restored User Drawing IoU Selection ---
 
-            # --- Restore Fallback Logic ---
             MIN_USER_IOU_FALLBACK_THRESHOLD = 0.10 # Lowered from 0.25
             did_fallback_to_user_drawing = False
 

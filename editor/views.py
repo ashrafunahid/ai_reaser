@@ -9,14 +9,27 @@ from .sam_segment import generate_mask_with_point, generate_mask_with_mask
 from .lama_infer import load_lama_model, run_lama_inpainting
 
 # Declaring Model Globally
-# lama_model = load_lama_model() # Old
-# lama_model, lama_refinement_kwargs = load_lama_model() # Previous version
-lama_model, lama_refiner_config = load_lama_model() # New variable name
+try:
+    # lama_model = load_lama_model() # Old
+    # lama_model, lama_refinement_kwargs = load_lama_model() # Previous version
+    lama_model, lama_refiner_config = load_lama_model() # New variable name
+except Exception as e:
+    print("Failed to load LaMa Model", e)
+    lama_model, lama_refiner_config = None, None
+    
 
 def upload_image(request):
     if request.method == 'POST':
         form = ImageUploadForm(request.POST, request.FILES)
         if form.is_valid():
+            
+            # If LaMa model not loaded properly then show the error
+            if not lama_model:
+                return render(request, 'editor/upload.html', {
+                    'form': form, 
+                    'error': 'Model Failed to load, Please try again'
+                    })
+                
             uploaded = form.save()
             image_path = uploaded.image.path
 
@@ -35,7 +48,7 @@ def upload_image(request):
                 # --- Debug: Save the mask as processed in views.py ---
                 debug_mask_dir = os.path.join('media', 'debug')
                 os.makedirs(debug_mask_dir, exist_ok=True)
-                cv2.imwrite(os.path.join(debug_mask_dir, f'view_mask_{uploaded.id}.png'), mask_array * 255)
+                # cv2.imwrite(os.path.join(debug_mask_dir, f'view_mask_{uploaded.id}.png'), mask_array * 255)
 
                 segmented_mask = generate_mask_with_mask(image_path, mask_array)
 
@@ -48,6 +61,7 @@ def upload_image(request):
                     'form': form,
                     'error': 'Please click (for point) or draw (for mask) on the image!'
                 })
+                
 
             # Save or pass segmented mask to template
             mask_save_path = os.path.join('media', 'outputs', f'mask_{uploaded.id}.png')
@@ -61,9 +75,10 @@ def upload_image(request):
 
             # Save inpainted result
             inpaint_path = os.path.join('media', 'outputs', f'inpaint_{uploaded.id}.png')
-            # --- Convert RGB to BGR for cv2.imwrite ---
+            # --- JULES: Convert RGB to BGR for cv2.imwrite ---
             inpainted_bgr = cv2.cvtColor(inpainted, cv2.COLOR_RGB2BGR)
             cv2.imwrite(inpaint_path, inpainted_bgr)
+            # --- END JULES ---
 
             return render(request, 'editor/result.html', {
                 'image': uploaded,
