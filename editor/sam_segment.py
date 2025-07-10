@@ -3,6 +3,7 @@ import cv2
 from segment_anything import sam_model_registry, SamPredictor
 import torch
 import torch.nn.functional as F
+import os
 
 # Load model
 sam_checkpoint = "segment-anything/checkpoints/sam_vit_h_4b8939.pth"
@@ -30,18 +31,17 @@ def generate_mask_with_point(image_path, input_point):
 
 
 
-import os # JULES: Added for path manipulation
 
 def generate_mask_with_mask(image_path, mask_array):
-    # --- JULES: Debugging ---
+    # --- Debugging ---
     image_id_str = os.path.splitext(os.path.basename(image_path))[0] # Extract image id assuming format like '1.png' or 'some_name.jpg'
     debug_mask_dir = os.path.join('media', 'debug')
     os.makedirs(debug_mask_dir, exist_ok=True)
 
     print(f"[SAM Debug {image_id_str}] generate_mask_with_mask called.")
     print(f"[SAM Debug {image_id_str}] Input mask_array - Shape: {mask_array.shape}, Dtype: {mask_array.dtype}, Unique values: {np.unique(mask_array)}")
-    cv2.imwrite(os.path.join(debug_mask_dir, f"sam_input_mask_{image_id_str}.png"), mask_array * 255) # Renamed temp_debug_mask
-    # --- END JULES ---
+    # cv2.imwrite(os.path.join(debug_mask_dir, f"sam_input_mask_{image_id_str}.png"), mask_array * 255) # Renamed temp_debug_mask
+    # --- END Debugging ---
 
     # Load and prepare the image
     image = cv2.imread(image_path)
@@ -76,18 +76,15 @@ def generate_mask_with_mask(image_path, mask_array):
         mask_resized = cv2.resize(mask_array, (w_feat, h_feat), interpolation=cv2.INTER_LINEAR)
         print(f"[SAM Debug {image_id_str}] Mask resized (float) to feature map size. Shape: {mask_resized.shape}, Dtype: {mask_resized.dtype}, Unique values: {np.unique(mask_resized)}")
 
-        # --- JULES: Binarize the resized mask before using as prompt ---
-        mask_resized = (mask_resized > 0.5).astype(np.float32) # JULES: Reverted: Binarize the coarse mask
+        # --- Binarize the resized mask before using as prompt ---
+        mask_resized = (mask_resized > 0.5).astype(np.float32) # Reverted: Binarize the coarse mask
         print(f"[SAM Debug {image_id_str}] Binarized mask_resized. Shape: {mask_resized.shape}, Dtype: {mask_resized.dtype}, Unique values: {np.unique(mask_resized)}")
-        # --- END JULES ---
-        cv2.imwrite(os.path.join(debug_mask_dir, f"sam_mask_resized_binarized_prompt_{image_id_str}.png"), (mask_resized * 255).astype(np.uint8)) # Save the binarized version for inspection
-        # --- END JULES ---
+        # cv2.imwrite(os.path.join(debug_mask_dir, f"sam_mask_resized_binarized_prompt_{image_id_str}.png"), (mask_resized * 255).astype(np.uint8)) # Save the binarized version for inspection
 
         # Convert to tensor
         dense_prompt = torch.as_tensor(mask_resized, dtype=torch.float32, device=device)
         dense_prompt = dense_prompt.unsqueeze(0).unsqueeze(0)  # Shape: [1, 1, h, w]
         print(f"[SAM Debug {image_id_str}] Dense_prompt tensor (from binarized mask_resized) - Shape: {dense_prompt.shape}, Dtype: {dense_prompt.dtype}, Min: {dense_prompt.min()}, Max: {dense_prompt.max()}")
-        # --- END JULES ---
 
         # Get dense positional encodings
         image_pe = predictor.model.prompt_encoder.get_dense_pe()
@@ -99,7 +96,7 @@ def generate_mask_with_mask(image_path, mask_array):
         )
 
         # Decode mask
-        # --- JULES: Implement multimask_output=True ---
+        # --- Implement multimask_output=True ---
         outputs = predictor.model.mask_decoder(
             image_embeddings=image_embedding,
             image_pe=image_pe,
@@ -123,7 +120,7 @@ def generate_mask_with_mask(image_path, mask_array):
             current_max_logit = single_mask_logits.max() # Keep for logging
             print(f"[SAM Debug {image_id_str}] Mask {i} - IOU: {iou_score:.4f}, Logits Min: {single_mask_logits.min():.4f}, Max: {current_max_logit:.4f}")
 
-            # --- JULES: Universal Normalized Thresholding ---
+            # --- Universal Normalized Thresholding ---
             NORMALIZED_MASK_THRESHOLD = 0.3 # Iteration 4: Changed from 0.7 to 0.3 based on user feedback / logs
 
             min_logit_norm = single_mask_logits.min()
@@ -135,13 +132,12 @@ def generate_mask_with_mask(image_path, mask_array):
                 normalized_single_mask = (single_mask_logits - min_logit_norm) / (max_logit_norm - min_logit_norm + 1e-6)
 
             # Save the normalized view before thresholding
-            cv2.imwrite(os.path.join(debug_mask_dir, f"sam_multi_normalized_{image_id_str}_mask{i}.png"), (normalized_single_mask * 255).astype(np.uint8))
+            # cv2.imwrite(os.path.join(debug_mask_dir, f"sam_multi_normalized_{image_id_str}_mask{i}.png"), (normalized_single_mask * 255).astype(np.uint8))
 
             binary_single_mask = (normalized_single_mask > NORMALIZED_MASK_THRESHOLD).astype(np.uint8)
             print(f"[SAM Debug {image_id_str}] Mask {i} - Universal normalized thresholding applied (>{NORMALIZED_MASK_THRESHOLD})")
-            # --- END JULES ---
 
-            cv2.imwrite(os.path.join(debug_mask_dir, f"sam_multi_thresholded_{image_id_str}_mask{i}.png"), binary_single_mask * 255)
+            # cv2.imwrite(os.path.join(debug_mask_dir, f"sam_multi_thresholded_{image_id_str}_mask{i}.png"), binary_single_mask * 255)
             processed_masks_info.append({
                 "mask": binary_single_mask,
                 "iou": iou_score,
@@ -154,13 +150,13 @@ def generate_mask_with_mask(image_path, mask_array):
         selected_mask_info_log = "No suitable mask found initially."
 
         if processed_masks_info:
-            # --- JULES: Implement Idea A - Select SAM mask based on overlap with user's drawing ---
+            # --- Select SAM mask based on overlap with user's drawing ---
             if not processed_masks_info:
                 print(f"[SAM Debug {image_id_str}] No masks processed from SAM output. Critical fallback.")
                 best_mask_np = None # Will trigger fallback later
                 selected_mask_info_log = "No masks from SAM to evaluate."
             else:
-                # --- JULES: Modify SAM Mask Selection Logic for Object Expansion ---
+                # --- Modify SAM Mask Selection Logic for Object Expansion ---
                 # Select SAM mask with the highest internal SAM IoU score.
                 best_sam_internal_iou = -1
                 selected_mask_index_by_sam_iou = -1
@@ -182,7 +178,7 @@ def generate_mask_with_mask(image_path, mask_array):
                     best_mask_np = np.zeros((sam_output_h, sam_output_w), dtype=np.uint8)
                     selected_mask_info_log = "No SAM mask selected (e.g., processed_masks_info empty or all IoUs were invalid). Using blank mask."
                     print(f"[SAM Debug {image_id_str}] Critical: No SAM mask could be selected based on internal IoU.")
-                # --- JULES: Restore SAM Mask Selection Logic based on User Drawing IoU ---
+                # --- Restore SAM Mask Selection Logic based on User Drawing IoU ---
                 # Resize user's original drawing (mask_array) to SAM's output mask resolution for comparison
                 sam_output_h, sam_output_w = processed_masks_info[0]["mask"].shape[:2]
                 user_drawing_resized_for_eval = cv2.resize(mask_array, (sam_output_w, sam_output_h), interpolation=cv2.INTER_NEAREST)
@@ -222,9 +218,9 @@ def generate_mask_with_mask(image_path, mask_array):
                         best_mask_np = np.zeros((sam_output_h, sam_output_w), dtype=np.uint8) # Default blank
                         selected_mask_info_log = "Critical: No masks in processed_masks_info for selection."
 
-            # --- END JULES Restored User Drawing IoU Selection ---
+            # --- END Restored User Drawing IoU Selection ---
 
-            # --- JULES: Restore Fallback Logic ---
+            # --- Restore Fallback Logic ---
             MIN_USER_IOU_FALLBACK_THRESHOLD = 0.10 # Lowered from 0.25
             did_fallback_to_user_drawing = False
 
@@ -247,7 +243,7 @@ def generate_mask_with_mask(image_path, mask_array):
                 else: # No positive overlap AND SAM had no best guess (should be rare)
                      selected_mask_info_log = (f"FALLBACK to user's drawing. No SAM mask suitable. Using user's drawn mask directly.")
                 best_mask_np = best_mask_np.astype(np.uint8)
-            # --- END JULES Restore Fallback Logic ---
+            # --- END Restore Fallback Logic ---
 
         print(f"[SAM Debug {image_id_str}] {selected_mask_info_log} to pass to LaMa.")
 
@@ -262,7 +258,7 @@ def generate_mask_with_mask(image_path, mask_array):
                  fallback_h, fallback_w = 256, 256 # Absolute last resort
             best_mask_np = np.zeros((fallback_h, fallback_w), dtype=np.uint8)
 
-        # --- JULES: Restore Conditional Inversion and Constraining Logic ---
+        # --- Restore Conditional Inversion and Constraining Logic ---
         if not did_fallback_to_user_drawing:
             # SAM's mask was chosen and is good enough.
             # DO NOT INVERT best_mask_np. It already represents the object to inpaint.
@@ -285,12 +281,12 @@ def generate_mask_with_mask(image_path, mask_array):
             # LaMa expects 1 where inpainting should occur.
             constrained_mask_at_sam_res = best_mask_np 
             print(f"[SAM Debug {image_id_str}] Fallback: Using user's drawing directly as mask for LaMa. Shape: {constrained_mask_at_sam_res.shape}, Unique: {np.unique(constrained_mask_at_sam_res)}")
-        # --- END JULES Restore Conditional Inversion and Constraining Logic ---
+        # --- END Restore Conditional Inversion and Constraining Logic ---
 
         # Resize the final mask to original image size
         final_mask_output = cv2.resize(constrained_mask_at_sam_res, (original_size[1], original_size[0]), interpolation=cv2.INTER_NEAREST)
         print(f"[SAM Debug {image_id_str}] Final resized (constrained and inverted) mask output - Shape: {final_mask_output.shape}, Unique values: {np.unique(final_mask_output)}")
         # Save the final chosen mask that will be used by LaMa for clarity
-        cv2.imwrite(os.path.join(debug_mask_dir, f"sam_final_chosen_multimask_{image_id_str}.png"), final_mask_output * 255)
+        # cv2.imwrite(os.path.join(debug_mask_dir, f"sam_final_chosen_multimask_{image_id_str}.png"), final_mask_output * 255)
 
     return final_mask_output
