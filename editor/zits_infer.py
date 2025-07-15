@@ -11,9 +11,10 @@ from PIL import Image
 ZITS_BASE = Path(__file__).resolve().parent.parent / "ZITS_inpainting"
 ZITS_SRC = ZITS_BASE / "src"
 sys.path.append(str(ZITS_SRC))
+sys.path.append(str(ZITS_BASE))
 
 # Import from correct model path
-from models.network_zits import InpaintingModel
+from src.models.network_zits import InpaintingModel
 
 
 def load_image(image_path):
