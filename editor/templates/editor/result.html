@@ -14,14 +14,26 @@
     <center>
     <table>
         <tr>
-            <td><h2>Original Image</h2></td>
-            <td><h2>Generated Mask</h2></td>
-            <td><h2>Inpainted Image</h2></td>
+            <td colspan="3" align=center><h2>Original Image</h2></td>
+            {% comment %} <td><h2>Generated Mask</h2></td> {% endcomment %}
+            {% comment %} <td><h2>Inpainted Image SAM</h2></td> {% endcomment %}
+            {% comment %} <td><h2>Inpainted Image YOLO</h2></td> {% endcomment %}
         </tr>
         <tr>
-            <td><img src="{{ image.image.url }}" width="500"></td>
-            <td><img src="{{ mask_path }}" width="500"></td>
-            <td><img src="{{ inpainted_path }}" width="500"></td>
+            <td colspan="3" align=center><img src="{{ image.image.url }}" width="500"></td>
+            {% comment %} <td><img src="{{ mask_path }}" width="500"></td> {% endcomment %}
+            {% comment %} <td><img src="{{ inpainted_path }}" width="500"></td> {% endcomment %}
+            {% comment %} <td><img src="{{ inpainted_path_yolo }}" width="500"></td> {% endcomment %}
+        </tr>
+        <tr>
+            <td><h2>Inpainted Image LaMa</h2></td>
+            <td><h2>Inpainted Image ZITS</h2></td>
+            <td><h2>Inpainted Image ZITS++</h2></td>
+        </tr>
+        <tr>
+            <td><img src="{{ inpainted_path_lama }}" width="500"></td>
+            <td><img src="{{ inpainted_path_zits }}" width="500"></td>
+            <td><img src="{{ inpainted_path_zitspp }}" width="500"></td>
         </tr>
     </table>
 </center>
