@@ -83,7 +83,7 @@ def upload_image(request):
             # inpainted = run_lama_inpainting(image_path, mask_save_path, lama_model, lama_refinement_kwargs) # Previous
             inpainted = run_lama_inpainting(image_path, sam_mask_save_path, lama_model, lama_refiner_config) # New
             # inpainted_zits = run_zits_inpainting(image_path, sam_mask_save_path)
-            inpainted_zitspp = run_zitspp(image_path, sam_mask_save_path)
+            inpainted_zitspp = run_zitspp(image_path, sam_mask_save_path, 'ZITS_PlusPlus/ckpts/model_512/models/last.ckpt')
             inpainted_yolo = run_lama_inpainting(image_path, yolo_mask_save_path, lama_model, lama_refiner_config) 
 
             # Save inpainted result
