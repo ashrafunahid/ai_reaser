@@ -14,7 +14,6 @@ def run_zitspp(image_path, mask_path, ckpt_path, device='cuda'):
         '--img_dir', os.path.dirname(image_path),
         '--mask_dir', os.path.dirname(mask_path),
         '--use_ema',
-        '--object_removal',
     ]
 
     subprocess.run(cmd, check=True)
