@@ -8,7 +8,7 @@ from .models import UploadedImage
 from .sam_segment import generate_mask_with_point, generate_mask_with_mask
 from .yolo_segment import generate_mask_with_yolo
 from .lama_infer import load_lama_model, run_lama_inpainting
-from .zits_infer import run_zits
+# from .zits_infer import run_zits_inpainting
 from .zitspp_infer import run_zitspp
 
 # Declaring Model Globally
@@ -20,6 +20,8 @@ except Exception as e:
     print("Failed to load LaMa Model", e)
     lama_model, lama_refiner_config = None, None
     
+# cfg_path =  'ZITS_PlusPlus/configs/config_zitspp_finetune.yml',
+# ckpt_path = 'ZITS_PlusPlus/ckpts/model_512/models/last.ckpt'
 
 def upload_image(request):
     if request.method == 'POST':
@@ -80,7 +82,7 @@ def upload_image(request):
             # inpainted = run_lama_inpainting(image_path, mask_save_path, lama_model) # Old
             # inpainted = run_lama_inpainting(image_path, mask_save_path, lama_model, lama_refinement_kwargs) # Previous
             inpainted = run_lama_inpainting(image_path, sam_mask_save_path, lama_model, lama_refiner_config) # New
-            inpainted_zits = run_zits(image_path, sam_mask_save_path)
+            # inpainted_zits = run_zits_inpainting(image_path, sam_mask_save_path)
             inpainted_zitspp = run_zitspp(image_path, sam_mask_save_path)
             inpainted_yolo = run_lama_inpainting(image_path, yolo_mask_save_path, lama_model, lama_refiner_config) 
 
@@ -91,11 +93,11 @@ def upload_image(request):
             inpaint_path_yolo = os.path.join('media', 'outputs', f'yolo_inpaint_{uploaded.id}.png')
             # --- Convert RGB to BGR for cv2.imwrite ---
             inpainted_bgr = cv2.cvtColor(inpainted, cv2.COLOR_RGB2BGR)
-            inpainted_zits_bgr = cv2.cvtColor(inpainted_zits, cv2.COLOR_RGB2BGR)
+            # inpainted_zits_bgr = cv2.cvtColor(inpainted_zits, cv2.COLOR_RGB2BGR)
             inpainted_zitspp_bgr = cv2.cvtColor(inpainted_zitspp, cv2.COLOR_RGB2BGR)
             inpainted_bgr_yolo = cv2.cvtColor(inpainted_yolo, cv2.COLOR_RGB2BGR)
             cv2.imwrite(inpaint_path_lama, inpainted_bgr)
-            cv2.imwrite(inpaint_path_zits, inpainted_zits_bgr)
+            # cv2.imwrite(inpaint_path_zits, inpainted_zits_bgr)
             cv2.imwrite(inpaint_path_zitspp, inpainted_zitspp_bgr)
             cv2.imwrite(inpaint_path_yolo, inpainted_bgr_yolo)
 
