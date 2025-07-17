@@ -51,17 +51,13 @@ def run_zitspp(image_path, mask_path, device='cuda'):
     subprocess.run(cmd, check=True)
 
     # Step 4: Look for output inpainted image (not input.png!)
-    result_dir = os.path.join(base_output_dir, f'zitspp_{temp_id}')
+    result_dir = os.path.join(base_output_dir)
     if not os.path.exists(result_dir):
         print(f"[ERROR] Result directory not found: {result_dir}")
         return None
 
     # Look for an image that starts with "inpainted"
-    inpainted_file = None
-    for file in os.listdir(result_dir):
-        if file.startswith("inpainted") and file.endswith((".png", ".jpg")):
-            inpainted_file = os.path.join(result_dir, file)
-            break
+    inpainted_file = os.path.join(result_dir, 'inpainted.png')
 
     if not inpainted_file or not os.path.exists(inpainted_file):
         print(f"[ERROR] Inpainted output not found in {result_dir}")
