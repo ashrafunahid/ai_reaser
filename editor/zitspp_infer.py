@@ -1,26 +1,3 @@
-# import os
-# import subprocess
-# import argparse
-
-# def run_zitspp(image_path, mask_path, ckpt_path, device='cuda'):
-#     output_dir = 'media/outputs/zitspp'
-#     os.makedirs(output_dir, exist_ok=True)
-
-#     cmd = [
-#         'python', 'ZITS_PlusPlus/test.py',
-#         '--config', 'ZITS_PlusPlus/configs/config_zitspp_finetune.yml',
-#         '--ckpt_resume', ckpt_path,
-#         '--wf_ckpt', 'ZITS_PlusPlus/ckpts/model_512/models/best_lsm_hawp.pth', 
-#         '--save_path', output_dir,
-#         '--img_dir', os.path.dirname(image_path),
-#         '--mask_dir', os.path.dirname(mask_path),
-#         '--use_ema',
-#         '--exp_name', 'zitspp',
-#     ]
-
-#     subprocess.run(cmd, check=True)
-#     return os.path.join(output_dir, os.path.basename(image_path))
-
 import os
 import subprocess
 from PIL import Image
@@ -70,6 +47,8 @@ def run_zitspp(image_path, mask_path, device='cuda'):
         '--use_ema',
         '--exp_name', f'zitspp_{temp_id}'
     ]
+
+    subprocess.run(cmd, check=True)
 
     # Step 4: Look for output inpainted image (not input.png!)
     result_dir = os.path.join(base_output_dir, f'zitspp_{temp_id}')
