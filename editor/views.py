@@ -3,6 +3,7 @@ import base64
 import numpy as np
 import cv2
 from django.shortcuts import render
+from django.http import HttpResponseServerError
 from .forms import ImageUploadForm
 from .models import UploadedImage
 from .sam_segment import generate_mask_with_point, generate_mask_with_mask
@@ -84,6 +85,8 @@ def upload_image(request):
             inpainted = run_lama_inpainting(image_path, sam_mask_save_path, lama_model, lama_refiner_config) # New
             # inpainted_zits = run_zits_inpainting(image_path, sam_mask_save_path)
             inpainted_zitspp = run_zitspp(image_path, sam_mask_save_path)
+            if inpainted_zitspp is None:
+                return HttpResponseServerError("ZITS++ failed to produce output.")
             inpainted_yolo = run_lama_inpainting(image_path, yolo_mask_save_path, lama_model, lama_refiner_config) 
 
             # Save inpainted result

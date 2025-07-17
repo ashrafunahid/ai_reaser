@@ -12,7 +12,9 @@ from .impl.toolbox import conv_tri, grad2
 #    ** Such slight differences (11e-8 - 9e-8 = 2e-8) in precision **
 #    ** would lead to very different results (`out = 0` in C and `out = edge` in python). **
 #    Sadly, C implementation is not expected but needed :(
-solver = cdll.LoadLibrary("/home/wmlce/dql_inpainting/CNN_final/src/cxx/lib/solve_csa.so")
+current_dir = os.path.dirname(os.path.abspath(__file__))
+solver_path = os.path.join(current_dir, '..', 'nms', 'cxx', 'lib', 'solve_csa.so')
+solver = cdll.LoadLibrary(solver_path)
 c_float_pointer = POINTER(c_float)
 solver.nms.argtypes = [c_float_pointer, c_float_pointer, c_float_pointer, c_int, c_int, c_float, c_int, c_int]
 
